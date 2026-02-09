@@ -75,15 +75,14 @@ impl DesktopWallpaper {
                 let monitor_index = unsafe {
                     OsString::from_wide(self.interface.GetMonitorDevicePathAt(index)?.as_wide())
                 };
-                let wallpaper = unsafe {
-                    OsString::from_wide(
-                        self.interface
-                            .GetWallpaper(PCWSTR::from_raw(
-                                monitor_index.encode_wide().collect::<Vec<u16>>().as_ptr(),
-                            ))?
-                            .as_wide(),
-                    )
-                };
+                let monitor_index_wide: Vec<u16> = monitor_index.encode_wide().chain(std::iter::once(0)).collect();
+				let wallpaper = unsafe {
+				    OsString::from_wide(
+				        self.interface
+				            .GetWallpaper(PCWSTR(monitor_index_wide.as_ptr()))?
+				            .as_wide(),
+				    )
+				};
 
                 Ok(Monitor {
                     monitor_index,
@@ -94,17 +93,16 @@ impl DesktopWallpaper {
     }
 
     pub fn get_wallpaper(&self, monitor: &Monitor) -> std::result::Result<PathBuf, String> {
-        let wallpaper: PWSTR = unsafe {
-            self.interface
-                .GetWallpaper(PCWSTR(
-                    monitor
-                        .monitor_index
-                        .encode_wide()
-                        .collect::<Vec<u16>>()
-                        .as_ptr(),
-                ))
-                .map_err(|e| e.to_string())?
-        };
+        let monitor_index_wide: Vec<u16> = monitor
+			.monitor_index
+			.encode_wide()
+			.chain(std::iter::once(0))
+			.collect();
+		
+		let wallpaper: PWSTR = unsafe {
+			self.interface
+				.GetWallpaper(PCWSTR(monitor_index_wide.as_ptr()))?
+		};
 
         let wallpaper_string = unsafe { OsString::from_wide(wallpaper.as_wide()) };
 
@@ -133,16 +131,6 @@ impl DesktopWallpaper {
 
             self.interface.SetPosition(position.into())?;
             Ok(())
-        }
-    }
-}
-
-impl Drop for DesktopWallpaper {
-    fn drop(&mut self) {
-        unsafe {
-            ManuallyDrop::drop(&mut self.interface);
-            CoFreeUnusedLibraries();
-            CoUninitialize();
         }
     }
 }
