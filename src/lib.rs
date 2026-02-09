@@ -101,7 +101,8 @@ impl DesktopWallpaper {
 		
 		let wallpaper: PWSTR = unsafe {
 			self.interface
-				.GetWallpaper(PCWSTR(monitor_index_wide.as_ptr()))?
+				.GetWallpaper(PCWSTR(monitor_index_wide.as_ptr()))
+			    .map_err(|e| e.to_string())?
 		};
 
         let wallpaper_string = unsafe { OsString::from_wide(wallpaper.as_wide()) };
